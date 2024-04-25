@@ -1,0 +1,155 @@
+# TensorFlow and tf.keras
+import tensorflow as tf
+# Helper libraries
+import numpy as np
+import matplotlib.pyplot as plt
+print(tf.__version__)
+
+
+fashion_mnist = tf.keras.datasets.fashion_mnist
+(train_images, train_labels), (test_images, test_labels) = fashion_mnist.load_data()
+
+
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+train_images.shape
+
+train_labels
+
+test_images.shape
+
+len(test_labels)
+
+plt.figure()
+plt.imshow(train_images[0])
+plt.colorbar() #lower pixel values (e.g., black for pixel value 0), while lighter colors represent higher pixel value
+plt.grid(False)
+plt.show()
+
+train_images = train_images / 255.0 #converting them to floating-point numbers between 0 and 1.
+test_images = test_images / 255.0
+
+
+plt.figure(figsize=(10,10)) #size of 10x10 inches. (height and weight)
+for i in range(25):#25 images
+  plt.subplot(5,5,i+1)# 5*5  layout of the grid (current position)
+  plt.xticks([]) #remove the tick marks on the x and y axes, making the plot cleaner.
+  plt.yticks([])
+  plt.grid(False)#turns off gridlines  cleaning up the visualization.
+  plt.imshow(train_images[i], cmap=plt.cm.binary) #displays the current image (train_images[i]) && colormap should be binary black and white.
+  plt.xlabel(class_names[train_labels[i]]) #adds a label below each image
+plt.show()
+
+
+model = tf.keras.Sequential([
+tf.keras.layers.Flatten(input_shape=(28, 28)), #he input layer. It transforms the 28x28 image into a 1D array of 784 (28*28) elements
+tf.keras.layers.Dense(128, activation='relu'), #hidden layer with 128 neurons and ReLU activation function. The Dense layer represents a fully connected layer
+tf.keras.layers.Dense(10) # output layer with 10 neurons. Since this is a classification task with 10 classes, there is one neuron for each class. There's no activation function specified here, which means it will output raw logits.
+])
+
+
+model.compile(optimizer='adam',
+loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+              #  model will output logits, and the loss function will apply the softmax activation 
+metrics=['accuracy'])
+
+
+model.fit(train_images, train_labels, epochs=30)
+#train,target,epochas
+#epoch number of times the model will iterate over the entire training
+
+
+test_loss, test_acc = model.evaluate(test_images, test_labels, verbose=2)
+print('\nTest accuracy:', test_acc)
+#verbose=2: This controls the verbosity during evaluation. Setting it to 2 means that progress bars will be shown for each epoch
+
+
+probability_model = tf.keras.Sequential([model,
+tf.keras.layers.Softmax()])
+# model= previously trained nnmodel and keras.layers=(raw output) of the previous layer into probabilities.  squashes the output into the range [0, 1],
+#  ensuring that the sum of probabilities across all classes equals 1
+
+
+predictions = probability_model.predict(test_images)
+                # softmax layer    predictions for the provided test images probaility
+
+
+
+predictions[0]
+
+np.argmax(predictions[0])
+
+
+test_labels[0]
+
+
+def plot_image(i, predictions_array, true_label, img):
+  true_label, img = true_label[i], img[i] #Extracts the true label and image corresponding to index i.
+  plt.grid(False) #Removes grid lines and ticks from the plot.
+  plt.xticks([])
+  plt.yticks([])
+  plt.imshow(img, cmap=plt.cm.binary) #Displays the image.
+  predicted_label = np.argmax(predictions_array) #Gets the index of the class with the highest probability from the predictions array.
+  if predicted_label == true_label: #Sets the color of the label based on whether the prediction is correct or no
+    color = 'blue'
+  else:
+    color = 'red'
+  plt.xlabel("{} {:2.0f}% ({})".format(class_names[predicted_label], #Displays the predicted label, its confidence, and the true label.
+                                100*np.max(predictions_array),
+                                class_names[true_label]),
+                                color=color)
+def plot_value_array(i, predictions_array, true_label): #Gets the true label corresponding to index i.
+  true_label = true_label[i]
+  plt.grid(False)
+  plt.xticks(range(10))
+  plt.yticks([])
+  thisplot = plt.bar(range(10), predictions_array, color="#777777") # Plots a bar chart showing the predicted probabilities for each class.
+  plt.ylim([0, 1]) #Sets the y-axis limits to [0, 1].
+  predicted_label = np.argmax(predictions_array) #index of the class with the highest probability.
+  thisplot[predicted_label].set_color('red') #Sets the color of the predicted class bar to red.
+  thisplot[true_label].set_color('blue') #Sets the color of the true class bar to blue.
+
+
+#test image
+i = 0
+plt.figure(figsize=(6,3)) # 6x3 inches.
+plt.subplot(1,2,1) #first subplot in a 1x2 grid. This subplot will be positioned at index 1 (left side).
+plot_image(i, predictions[i], test_labels, test_images) # plot the image along with its predicted and true labels.
+plt.subplot(1,2,2) #1x2 grid. This subplot will be positioned at index 2 (right side).
+plot_value_array(i, predictions[i], test_labels)
+plt.show()
+
+# left plot-predicted label, its confidence score, and the true label.
+# right plot- bar chart of the predicted probability distribution for each class.
+
+
+i = 12
+plt.figure(figsize=(6,3))
+plt.subplot(1,2,1)
+plot_image(i, predictions[i], test_labels, test_images) # function to plot the image along with its predicted and true labels
+plt.subplot(1,2,2) #positioned at index 2 (right side).
+plot_value_array(i, predictions[i], test_labels)
+plt.show()
+# left plot-ts confidence score, and the true label.
+# right-predicted probability distribution for each class.
+
+
+# Plot the first X test images, their predicted labels, and the true labels.
+# Color correct predictions in blue and incorrect predictions in red.
+num_rows = 5
+num_cols = 3
+num_images = num_rows*num_cols #calculates the total number of images to display.
+plt.figure(figsize=(2*2*num_cols, 2*num_rows)) #creates a new figure with a size determined by the number of rows and columns in the grid.
+for i in range(num_images):
+  plt.subplot(num_rows, 2*num_cols, 2*i+1) #sets up the subplot for the image itself at position 2*i+1 in the grid.
+  plot_image(i, predictions[i], test_labels, test_images)# function plots the image along with its predicted label and true label.
+  plt.subplot(num_rows, 2*num_cols, 2*i+2) #sets up the subplot for the bar chart of the predicted probability distribution at position 2*i+2 in the grid.
+  plot_value_array(i, predictions[i], test_labels) # function plots the predicted probability distribution for each class.
+plt.tight_layout() # no overlap between subplots.
+plt.show()
+
+
+# Grab an image from the test dataset.
+img = test_images[1]
+print(img.shape)
